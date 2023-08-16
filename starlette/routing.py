@@ -34,6 +34,13 @@ class NoMatchFound(Exception):
 
 
 class Match(Enum):
+    """
+    匹配路由结果
+
+    NONE: 没有匹配到任何路由。
+    PARTIAL: 匹配到了部分路由，但还没有完全匹配
+    FULL: 完全匹配了某个路由。
+    """
     NONE = 0
     PARTIAL = 1
     FULL = 2
@@ -97,9 +104,15 @@ def websocket_session(
 
 
 def get_name(endpoint: typing.Callable[..., typing.Any]) -> str:
+    """
+    获取endpoint名称。
+    如果 endpoint 是一个函数或类，则直接返回其 __name__ 属性。
+    如果 endpoint 是一个实例，则获取其类的名称。
+    """
     if inspect.isroutine(endpoint) or inspect.isclass(endpoint):
-        return endpoint.__name__
-    return endpoint.__class__.__name__
+        return endpoint.__name__  
+    # 若是一个实例，则获取其类的名称
+    return endpoint.__class__.__name__ 
 
 
 def replace_params(
@@ -226,6 +239,8 @@ class Route(BaseRoute):
 
         endpoint_handler = endpoint
         while isinstance(endpoint_handler, functools.partial):
+            # 因为 functools.partial 对象也是可调用对象，它包装了一个函数或方法，并固定了部分参数，
+            # 因此需要将其解包，获取原始的函数或方法，才能进行后续的处理。
             endpoint_handler = endpoint_handler.func
         if inspect.isfunction(endpoint_handler) or inspect.ismethod(endpoint_handler):
             # Endpoint is function or method. Treat it as `func(request) -> response`.
@@ -234,15 +249,24 @@ class Route(BaseRoute):
                 methods = ["GET"]
         else:
             # Endpoint is a class. Treat it as ASGI.
+            # 如果 endpoint_handler 不是函数或方法，那么将其视为一个 ASGI 应用程序。
+            # 这意味着该路由将直接使用传入的 endpoint 参数作为处理函数，而不需要进行转换
             self.app = endpoint
 
         if methods is None:
+            # 如果 self.methods 属性为 None，则表示该路由可以接受任何 HTTP 请求方法。
             self.methods = None
         else:
             self.methods = {method.upper() for method in methods}
             if "GET" in self.methods:
+                # HTTP 协议规定，如果服务器支持 GET 请求，那么它也必须支持 HEAD 请求，
+                # 且 HEAD 请求的响应与 GET 请求的响应相同，只是没有响应体。
                 self.methods.add("HEAD")
 
+        # Given a path string, like: "/{username:str}",
+        # regex:      "/(?P<username>[^/]+)"
+        # format:     "/{username}"
+        # convertors: {"username": StringConvertor()}
         self.path_regex, self.path_format, self.param_convertors = compile_path(path)
 
     def matches(self, scope: Scope) -> typing.Tuple[Match, Scope]:
