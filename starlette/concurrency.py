@@ -32,6 +32,7 @@ async def run_in_threadpool(
     if kwargs:  # pragma: no cover
         # run_sync doesn't accept 'kwargs', so bind them in here
         func = functools.partial(func, **kwargs)
+    # 在线程池中获取在一个新的线程中同步运行一个阻塞函数 func，并返回其结果
     return await anyio.to_thread.run_sync(func, *args)
 
 

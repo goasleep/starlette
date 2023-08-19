@@ -43,9 +43,7 @@ Send = typing.Callable[[Message], typing.Awaitable[None]]
 
 ASGIApp = typing.Callable[[Scope, Receive, Send], typing.Awaitable[None]]
 
-StatelessLifespan = typing.Callable[
-    [AppType], typing.AsyncContextManager[None]
-]
+StatelessLifespan = typing.Callable[[AppType], typing.AsyncContextManager[None]]
 StatefulLifespan = typing.Callable[
     [AppType], typing.AsyncContextManager[typing.Mapping[str, typing.Any]]
 ]
@@ -58,6 +56,4 @@ HTTPExceptionHandler = typing.Callable[
 WebSocketExceptionHandler = typing.Callable[
     ["WebSocket", Exception], typing.Awaitable[None]
 ]
-ExceptionHandler = typing.Union[
-    HTTPExceptionHandler, WebSocketExceptionHandler
-]
+ExceptionHandler = typing.Union[HTTPExceptionHandler, WebSocketExceptionHandler]
