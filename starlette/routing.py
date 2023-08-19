@@ -70,12 +70,22 @@ def request_response(
     """
 
     async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        """
+        An ASGI application that handles HTTP requests.
+
+        :param scope: The ASGI scope of the request.
+        :param receive: A coroutine that receives incoming messages from the client.
+        :param send: A coroutine that sends outgoing messages to the client.
+        """
         request = Request(scope, receive, send)
 
         async def app(scope: Scope, receive: Receive, send: Send) -> None:
             if is_async_callable(func):
+                # 如果传入的函数是异步函数，则直接调用它。
                 response = await func(request)
             else:
+                # 如果不是，则在线程池中运行它。
+                # TODO：
                 response = await run_in_threadpool(func, request)
             await response(scope, receive, send)
 
@@ -145,42 +155,56 @@ def compile_path(
     format:     "/{username}"
     convertors: {"username": StringConvertor()}
     """
+    
     is_host = not path.startswith("/")
 
     path_regex = "^"
     path_format = ""
     duplicated_params = set()
-
     idx = 0
     param_convertors = {}
+
+    # 循环每一个匹配的参数
     for match in PARAM_REGEX.finditer(path):
+        # path = "/int/{param:int}" => ('param', ':int')
         param_name, convertor_type = match.groups("str")
-        convertor_type = convertor_type.lstrip(":")
+        # convertor_type = 'int'
+        convertor_type = convertor_type.lstrip(":") 
+
+        # 获取类型转换器
         assert (
             convertor_type in CONVERTOR_TYPES
         ), f"Unknown path convertor '{convertor_type}'"
         convertor = CONVERTOR_TYPES[convertor_type]
 
+        # 添加目前路径段的匹配到路径正则中，'^/int/'
         path_regex += re.escape(path[idx : match.start()])
+        # 添加目前路径参数类型的匹配到路径正则中, '^/int/(?P<param>[0-9]+)'
         path_regex += f"(?P<{param_name}>{convertor.regex})"
-
+        
+        # '/int/'
         path_format += path[idx : match.start()]
+        # '/int/{param}'
         path_format += "{%s}" % param_name
-
+        
+        # 校验是否有重复的参数名
         if param_name in param_convertors:
             duplicated_params.add(param_name)
 
         param_convertors[param_name] = convertor
 
+        # 更新idx，准备下一段的匹配
         idx = match.end()
 
     if duplicated_params:
+        # 存在重复的参数名，抛错
         names = ", ".join(sorted(duplicated_params))
         ending = "s" if len(duplicated_params) > 1 else ""
         raise ValueError(f"Duplicated param name{ending} {names} at path {path}")
 
     if is_host:
         # Align with `Host.matches()` behavior, which ignores port.
+        # 路径字符串是主机名，则在编译正则表达式时，只需要在路径结尾添加 $，以匹配主机名
         hostname = path[idx:].split(":")[0]
         path_regex += re.escape(hostname) + "$"
     else:
