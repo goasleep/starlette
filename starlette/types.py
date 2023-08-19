@@ -26,6 +26,14 @@ AppType = typing.TypeVar("AppType")
 #     "asgi": {"version": "3.0"},
 # }
 Scope = typing.MutableMapping[str, typing.Any]
+
+# message example
+# {
+#     "type": "http.request",
+#     "body": b"Hello, world!",
+#     "more_body": False,
+#     "asgi": {"version": "3.0"}
+# }
 Message = typing.MutableMapping[str, typing.Any]
 
 # 表示接收请求数据的异步函数
@@ -35,16 +43,21 @@ Send = typing.Callable[[Message], typing.Awaitable[None]]
 
 ASGIApp = typing.Callable[[Scope, Receive, Send], typing.Awaitable[None]]
 
-StatelessLifespan = typing.Callable[[AppType], typing.AsyncContextManager[None]]
+StatelessLifespan = typing.Callable[
+    [AppType], typing.AsyncContextManager[None]
+]
 StatefulLifespan = typing.Callable[
     [AppType], typing.AsyncContextManager[typing.Mapping[str, typing.Any]]
 ]
 Lifespan = typing.Union[StatelessLifespan[AppType], StatefulLifespan[AppType]]
 
 HTTPExceptionHandler = typing.Callable[
-    ["Request", Exception], typing.Union["Response", typing.Awaitable["Response"]]
+    ["Request", Exception],
+    typing.Union["Response", typing.Awaitable["Response"]],
 ]
 WebSocketExceptionHandler = typing.Callable[
     ["WebSocket", Exception], typing.Awaitable[None]
 ]
-ExceptionHandler = typing.Union[HTTPExceptionHandler, WebSocketExceptionHandler]
+ExceptionHandler = typing.Union[
+    HTTPExceptionHandler, WebSocketExceptionHandler
+]

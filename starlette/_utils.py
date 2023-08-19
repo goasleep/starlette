@@ -24,8 +24,11 @@ def is_async_callable(obj: typing.Any) -> TypeGuard[AwaitableCallable[typing.Any
 
 def is_async_callable(obj: typing.Any) -> typing.Any:
     while isinstance(obj, functools.partial):
+        # 解包
         obj = obj.func
 
+    
+    # 判断是否为协程函数或者可调用对象的 __call__ 方法是否为协程函数
     return asyncio.iscoroutinefunction(obj) or (
         callable(obj) and asyncio.iscoroutinefunction(obj.__call__)
     )
